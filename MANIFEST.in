@@ -1,0 +1,6 @@
+# Include the license file
+include LICENSE
+# Include the readme file
+include README.md
+# Include the library files
+recursive-include src *.py
