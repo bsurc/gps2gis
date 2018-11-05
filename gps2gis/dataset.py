@@ -31,7 +31,6 @@ class Dataset:
 
     def write_multipoint(self, filename, threshold, duration):
         ## Inititalize Driver and output file
-        mp = ogr.Geometry(ogr.wkbMultiPoint)
         shpDriver = ogr.GetDriverByName("ESRI Shapefile")
         fieldName = 'Stop_Time'
         fieldType = ogr.OFTInteger
@@ -58,6 +57,7 @@ class Dataset:
                 if stopped:
                     stopped = False                    
                     ## Create point and add as feature
+                    mp = ogr.Geometry(ogr.wkbMultiPoint)
                     point = ogr.Geometry(ogr.wkbPoint)
                     point.AddPoint(row[2], row[1])
                     mp.AddGeometry(point)
