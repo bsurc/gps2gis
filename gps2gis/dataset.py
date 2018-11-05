@@ -30,34 +30,47 @@ class Dataset:
 
 
     def write_multipoint(self, filename, threshold, duration):
+        ## Inititalize Driver and output file
         mp = ogr.Geometry(ogr.wkbMultiPoint)
-        prev_time = self.data[0][0]
-        prev_vel = self.data[0][3]
-
         shpDriver = ogr.GetDriverByName("ESRI Shapefile")
-        fieldName = 'stop'
-        fieldType = ogr.OFTString
-        fieldValue = 'stop'
+        fieldName = 'Stop_Time'
+        fieldType = ogr.OFTInteger
         if os.path.exists(filename):
             shpDriver.DeleteDataSource(filename)
         outDataSource = shpDriver.CreateDataSource(filename)
         outLayer = outDataSource.CreateLayer(filename, geom_type=ogr.wkbMultiPoint )
-        # create a field
         idField = ogr.FieldDefn(fieldName, fieldType)
         outLayer.CreateField(idField)
+
+        ## Some variables to track stops
+        stopped = False
+        stop_time = None
+        prev_time = self.data[0][0]
+        prev_vel = self.data[0][3]
+
+        ## Loop over rows
         for row in self.data:
             if (prev_vel <= threshold and row[0] - prev_time >= duration and row[3] <= threshold):
-                point = ogr.Geometry(ogr.wkbPoint)
-                point.AddPoint(row[2], row[1])
-                mp.AddGeometry(point)
+                if not stopped:
+                    stopped = True
+                    stop_time = prev_time
+            else:
+                if stopped:
+                    stopped = False                    
+                    ## Create point and add as feature
+                    point = ogr.Geometry(ogr.wkbPoint)
+                    point.AddPoint(row[2], row[1])
+                    mp.AddGeometry(point)
+                    featureDefn = outLayer.GetLayerDefn()
+                    outFeature = ogr.Feature(featureDefn)
+                    outFeature.SetGeometry(mp)
+                    outFeature.SetField(fieldName, row[0] - stop_time)
+                    outLayer.CreateFeature(outFeature)
+                    ## Reset time
+                    stop_time = None
+            ## Set previous values to watch
             prev_time = row[0]
             prev_vel = row[3]
-        # Create the feature and set values
-        featureDefn = outLayer.GetLayerDefn()
-        outFeature = ogr.Feature(featureDefn)
-        outFeature.SetGeometry(mp)
-        outFeature.SetField(fieldName, fieldValue)
-        outLayer.CreateFeature(outFeature)
 
     def write_polygon(self, filename, threshold, duration, merge=False):
         stop_events = []
